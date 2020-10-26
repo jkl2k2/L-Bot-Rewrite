@@ -3,29 +3,54 @@ const genius = require(`genius-lyrics-api`);
 const config = require(`config`);
 const geniusAPI = config.get(`Bot.GENIUS_API`);
 
-const determineLyrics = (lyrics, page) => {
+let lyricsSections = [];
 
-};
+function determineLyrics(lyrics, page) {
+    lyricsSections = [];
 
-const sendEmbed = async (message, lyrics, page) => {
+    for (let i = 1; i < lyrics.length / 1000 + 1; i++) {
+        let chunk = ``;
+        chunk += lyrics.substring(0, 1000 * i);
+        chunk += `...`;
+        lyricsSections.push(chunk);
+    }
+
+    return lyricsSections[page - 1];
+}
+
+function makeEmbed(lyrics, result, page) {
+    let embed = new MessageEmbed()
+        .setTitle(result.title)
+        .setURL(result.url)
+        .setThumbnail(result.albumArt)
+        .setDescription(determineLyrics(lyrics, page))
+        .setColor(`#2EC14E`);
+    return embed;
+}
+
+async function sendEmbed(message, lyrics, result, page) {
+    console.log(`sendEmbed called for page ${page}`);
     return await message.channel.send(new MessageEmbed()
         .setTitle(result.title)
         .setURL(result.url)
         .setThumbnail(result.albumArt)
         .setDescription(determineLyrics(lyrics, page))
         .setColor(`#2EC14E`));
-};
+}
 
-const reactionHandler = async (message, page, sent) => {
+function reactionHandler(message, result, page, sent) {
+    console.log(`reactionHandler called`);
     const filter = (reaction, user) => {
         return ['◀️', '▶️'].includes(reaction.emoji.name) && user.id === message.author.id;
     };
 
-    if (page == 0 && !queue[5]) {
+    if (page == 0 && !lyricsSections[1]) {
 
         // Only first page exists
 
-    } else if (!queue[(page + 1) * 5]) {
+    } else if (!lyricsSections[page + 1]) {
+
+        console.log(`last page reached`);
 
         // Last page
         sent.react('◀️')
@@ -33,38 +58,66 @@ const reactionHandler = async (message, page, sent) => {
 
     } else if (page == 0) {
 
+        console.log(`first page`);
+
         // First page
         sent.react('▶️');
 
     } else if (page > 0) {
+
+        console.log(`page between first and last`);
 
         // Any page between first and last
         sent.react('◀️')
             .then(() => sent.react('▶️'))
             .catch(() => console.error('One of the emojis failed to react.'));
 
+    } else {
+        console.log(`message reaction catch`);
     }
 
     sent.awaitReactions(filter, { max: 1, time: 300000, errors: ['time'] })
         .then(async collected => {
+            console.log(`collected reaction`);
             const reaction = collected.first();
 
             if (reaction.emoji.name === '◀️') {
+                let newSent = sendEmbed(message, lyrics, result, page - 1);
+                console.log(`reaction was back arrow`);
+
                 // Previous page
-                sent.delete();
-                let newSent = await sendEmbed(page - 1, message);
-                reactionHandler(newSent, message, page - 1);
+                // sent.delete();
+
+                console.log(newSent);
+                console.log(`hello`);
+                // let newEmbed = makeEmbed(lyrics, result, page - 1);
+                // let newSent = await sent.edit(newEmbed);
+                reactionHandler(message, result, page - 1, newSent);
             } else if (reaction.emoji.name === "▶️") {
+                let newSent = sendEmbed(message, lyrics, result, page + 1);
+                console.log(`reaction was forward arrow`);
+
                 // Next page
-                sent.delete();
-                let newSent = await sendEmbed(page + 1, message);
-                reactionHandler(newSent, message, page + 1);
+                // sent.delete();
+                message.channel.send(`before`);
+
+                message.channel.send(`after`);
+                console.log(newSent);
+                console.log(`hello`);
+                // let newEmbed = makeEmbed(lyrics, result, page - 1);
+                // let newSent = await sent.edit(newEmbed);
+                reactionHandler(message, result, page + 1, newSent);
+            } else {
+                console.log(`user reaction catch`);
             }
+
+            console.log(`end of if block`);
         })
         .catch(async collected => {
+            console.log(`collection done`);
             sent.reactions.removeAll();
         });
-};
+}
 
 module.exports = {
     name: 'lyrics',
@@ -121,10 +174,15 @@ module.exports = {
 
             result = songs[0];
 
-            genius.getLyrics(options).then(resultLyrics => {
+            genius.getLyrics(options).then(async resultLyrics => {
                 lyrics = resultLyrics;
 
-                sendEmbed(message, lyrics, 1);
+                // let sent = await message.channel.send(makeEmbed(lyrics, result, 1));
+                let sent = await sendEmbed(message, resultLyrics, result, 1);
+
+                console.log(sent);
+
+                reactionHandler(message, resultLyrics, page, sent);
             });
         });
     }
