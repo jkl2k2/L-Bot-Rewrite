@@ -142,7 +142,9 @@ client.casinoUser = new Enmap({
 client.casinoUser.default = {
     losingStreak: 0,
     badgeLevel: 0,
-    prestigeLevel: 0
+    prestigeLevel: 0,
+    lastDailyClaim: 0,
+    freeSpins: 0,
 };
 
 client.on(`guildDelete`, guild => {
