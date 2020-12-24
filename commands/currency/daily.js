@@ -28,9 +28,12 @@ module.exports = {
 
         // client.casinoUser.set(message.author.id, 0, `lastDailyClaim`);
 
+        /*
         console.log(lastDailyClaim);
         console.log(oneDay);
-        console.log(oneDay - lastDailyClaim);
+        console.log(Date.now() - lastDailyClaim);
+        console.log(prettyMs(Math.abs(Date.now() - (lastDailyClaim + oneDay))));
+        */
 
         if (lastDailyClaim == 0) {
             // Has not claimed before
@@ -53,7 +56,7 @@ module.exports = {
 
             // Send deny message
             message.channel.send(new MessageEmbed()
-                .setDescription(`:information_source: Daily claim not ready. You claimed \`${prettyMs(Date.now() - lastDailyClaim, { compact: true, verbose: true })}\` ago.\n\n:slot_machine: **Your free spins:** \`${casinoUser[`freeSpins`]}\``)
+                .setDescription(`:information_source: Daily claim not ready. You claimed \`${prettyMs(Date.now() - lastDailyClaim, { compact: true, verbose: true })}\` ago.\nYou can claim again in \`${prettyMs(Math.abs(Date.now() - (lastDailyClaim + oneDay)), { verbose: true })}\`\n\n:slot_machine: **Your free spins:** \`${casinoUser[`freeSpins`]}\``)
                 .setColor(`#0083FF`));
 
         }
